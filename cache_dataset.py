@@ -65,23 +65,42 @@ def parse_args():
 # Worker function (must be top-level for multiprocessing pickling)
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _make_cache_path(obj_path: Path, cfg_dict: dict) -> Path:
+    """Build the config-encoded cache path (mirrors _cache_path in BreakingBadDataset)."""
+    r   = int(round(cfg_dict["disk_radius_frac"] * 1000))
+    tag = (
+        f"n{cfg_dict['n_fps']}"
+        f"_g{cfg_dict['disk_grid']}"
+        f"_c{cfg_dict['disk_channels']}"
+        f"_r{r:03d}"
+        f"_{cfg_dict['disk_fill']}"
+        f"_k{cfg_dict['curv_knn']}"
+        f"_f{cfg_dict['fourier_bands']}"
+    )
+    return obj_path.with_name(f"{obj_path.stem}__{tag}.pt")
+
+
 def _cache_one(args_tuple):
     """
-    Process a single OBJ and save its .pt cache.
+    Process a single OBJ and save its config-encoded .pt cache.
     Returns (obj_path, status) where status is 'cached', 'skipped', or 'error:...'
+
+    Cache filename format:
+        <stem>__n<n_fps>_g<disk_grid>_c<disk_channels>_r<radius*1000>_<fill>_k<knn>_f<fourier>.pt
+        e.g.  piece_0__n512_g16_c6_r050_rbf_k10_f0.pt
     """
     obj_path_str, cfg_dict, force = args_tuple
 
-    obj_path  = Path(obj_path_str)
-    cache_path = obj_path.with_suffix(".pt")
+    obj_path   = Path(obj_path_str)
+    pt_path    = _make_cache_path(obj_path, cfg_dict)
 
     # Skip if already cached and not forcing
-    if cache_path.exists() and not force:
-        return obj_path_str, "skipped"
+    if pt_path.exists() and not force:
+        return obj_path_str, f"skipped  ({pt_path.name})"
 
     # Delete stale cache if forcing
-    if cache_path.exists() and force:
-        cache_path.unlink()
+    if pt_path.exists() and force:
+        pt_path.unlink()
 
     # Import here so it works in subprocess context
     sys.path.insert(0, str(Path(__file__).parent))
@@ -91,7 +110,8 @@ def _cache_one(args_tuple):
 
     try:
         process_mesh(obj_path, cfg)
-        return obj_path_str, "cached"
+        
+        return obj_path_str, f"cached   ({pt_path.name})"
     except Exception as e:
         return obj_path_str, f"error: {e}"
 
@@ -183,7 +203,7 @@ def main():
     # ── Check how many are already cached ────────────────────────────────────
     already = sum(1 for p in jobs if cache_path(
         Path(p),
-        args.n_fps, args.disk_grid, args.disk_channels,
+        args.n_fps, args.disk_grid, 6,
         args.disk_radius_frac, args.disk_fill,
         args.curv_knn, args.fourier_bands,
     ).exists())
@@ -191,6 +211,15 @@ def main():
         log.info(f"Already cached : {already}  (use --force to reprocess)")
     to_run = len(jobs) if args.force else (len(jobs) - already)
     log.info(f"Will process   : {to_run}")
+
+    # Show the cache filename pattern so the user can verify it's correct
+    example = cache_path(
+        Path(jobs[0]) if jobs else Path("example.obj"),
+        args.n_fps, args.disk_grid, 6,
+        args.disk_radius_frac, args.disk_fill,
+        args.curv_knn, args.fourier_bands,
+    )
+    log.info(f"Cache filename : {example.name}  (pattern for all files)")
 
     # ── Process ───────────────────────────────────────────────────────────────
     t0       = time.time()
@@ -203,18 +232,17 @@ def main():
         # Serial — easier to debug, no multiprocessing overhead
         for i, ja in enumerate(job_args):
             path, status = _cache_one(ja)
-            if status == "cached":
+            if status.startswith("cached"):
                 n_cached += 1
-            elif status == "skipped":
+            elif status.startswith("skipped"):
                 n_skipped += 1
             else:
                 n_errors += 1
-                print(status)
                 error_list.append((path, status))
                 if not args.skip_errors:
                     log.error(f"Failed: {path}  →  {status}")
                     sys.exit(1)
-
+            print(status)
             # Progress every 50 meshes
             done = i + 1
             if done % 50 == 0 or done == len(job_args):
@@ -235,14 +263,14 @@ def main():
             for fut in as_completed(futures):
                 path, status = fut.result()
                 done_count += 1
-                if status == "cached":
+                if status.startswith("cached"):
                     n_cached += 1
-                elif status == "skipped":
+                elif status.startswith("skipped"):
                     n_skipped += 1
                 else:
                     n_errors += 1
                     error_list.append((path, status))
-
+                print(status)
                 if done_count % 50 == 0 or done_count == len(job_args):
                     elapsed = time.time() - t0
                     rate    = n_cached / max(elapsed, 1)
@@ -276,8 +304,16 @@ def main():
                 f.write(f"{path}\t{err}\n")
         log.info(f"Error list saved → {err_path}")
 
-    # Verify cache completeness
-    total_pts = sum(1 for p in jobs if Path(p).with_suffix(".pt").exists())
+    # Verify cache completeness using the config-encoded filename
+    total_pts = sum(
+        1 for p in jobs
+        if cache_path(
+            Path(p),
+            args.n_fps, args.disk_grid, 6,
+            args.disk_radius_frac, args.disk_fill,
+            args.curv_knn, args.fourier_bands,
+        ).exists()
+    )
     log.info(f"\nCache completeness: {total_pts}/{len(jobs)} meshes have .pt files")
     if total_pts < len(jobs):
         log.warning(f"  {len(jobs)-total_pts} meshes still missing cache — "

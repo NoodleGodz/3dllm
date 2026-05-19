@@ -1,0 +1,28 @@
+path,class,caption_idx,images_used,object_description,fragment_location,fracture_surface,missing_piece_size,break_type,fragment_guess,confidence,caption,parse_error,raw_output,elapsed_s
+out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0.obj,Plate,0,"[""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_overview_pair.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair00.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair01.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair02.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair03.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair04.png""]","The intact object is a circular plate with a slightly raised rim, possibly with a subtle texture or pattern.","Bottom edge of the plate, likely a Boundary fracture.","Thin curved strip, about 10% of the surface, curving along the rim.",Tiny chip,A small chip from the rim due to impact.,A curved rim segment,high,A plate with a small curved piece broken off from its rim.,False,"{
+  ""object_description"": ""The intact object is a circular plate with a slightly raised rim, possibly with a subtle texture or pattern."",
+  ""fragment_location"": ""Bottom edge of the plate, likely a Boundary fracture."",
+  ""fracture_surface"": ""Thin curved strip, about 10% of the surface, curving along the rim."",
+  ""missing_piece_size"": ""Tiny chip"",
+  ""break_type"": ""A small chip from the rim due to impact."",
+  ""fragment_guess"": ""A curved rim segment"",
+  ""confidence"": ""high"",
+  ""caption"": ""A plate with a small curved piece broken off from its rim.""
+}",8.5
+out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0.obj,Plate,1,"[""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_overview_pair.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair00.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair01.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair02.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair03.png"", ""out/everyday/Plate/1389e932a2c776d83c143af07c12991a/fractured_11/piece_0_pair04.png""]",,,,,,,,,True,"{
+  ""object_description"": ""The intact object is a circular plate with a slightly raised edge, possibly with a decorative or functional lip around the rim. It appears to have a smooth, uniform surface.""
+
+  ""fragment_location"": ""The piece broke off from the bottom edge of the plate's outer rim. This is an Exterior break.""
+
+  ""fracture_surface"": ""The highlighted fracture is a thin curved strip, about 10% of the plate's circumference, curving along the rim.""
+
+  ""missing_piece_size"": ""The missing fragment is a small chip, approximately 5% of the plate's total surface area.""
+
+  ""break_type"": ""The break was likely caused by a minor impact or stress, resulting in a clean separation along the rim's curve.""
+
+  ""fragment_guess"": ""The missing fragment would look like a small, curved segment of the plate's outer rim.""
+
+  ""confidence"": ""medium""
+
+  ""caption"": ""A plate with a small curved rim fragment missing.""
+}",4.0

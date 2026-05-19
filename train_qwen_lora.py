@@ -619,9 +619,10 @@ def main():
     cfg = DatasetConfig(
         n_fps          = args.n_fps,
         disk_grid      = args.disk_grid,
+        disk_radius_frac= 0.05,
         disk_channels  = 6,           # always compute all 6, we select below
         disk_fill      = "rbf",
-        curv_knn       = 10,
+        curv_knn       = 30,
         cache_processed= True,
         fourier_bands  = 0,           # pos_enc dim = 6
     )

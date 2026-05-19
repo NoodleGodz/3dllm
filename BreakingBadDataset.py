@@ -395,8 +395,8 @@ def process_mesh(obj_path: Path, cfg: DatasetConfig) -> dict:
     Returns a dict ready to be packed into a Data object.
     """
     cache_path = _cache_path(obj_path, cfg)
-    print(cache_path)
     if cfg.cache_processed and cache_path.exists():
+        # print(f"using : {cache_path}")
         return torch.load(cache_path, weights_only=False)   
     # 1. Load & repair
     verts, tris, norms = load_mesh(obj_path)
@@ -481,7 +481,7 @@ def process_mesh(obj_path: Path, cfg: DatasetConfig) -> dict:
 
     if cfg.cache_processed:
         torch.save(result, cache_path)
-        log.debug(f"Cached → {cache_path} ")
+        log.info(f"Cached → {cache_path} ")
     return result
 
 
@@ -593,6 +593,8 @@ class BreakingBadDataset(Dataset):
         self.records = df.reset_index(drop=True)
         log.info(f"Dataset: {len(self.records)} samples, "
                  f"{len(all_classes)} classes: {all_classes[:8]}{'…' if len(all_classes)>8 else ''}")
+        example = Path("example.obj")
+        log.info(f"Example cache: {_cache_path(example, self.cfg)}")
 
     # ── Accessors ─────────────────────────────────────────────────────────────
 

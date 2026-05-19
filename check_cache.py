@@ -27,7 +27,9 @@ Usage
 import argparse
 import sys
 from pathlib import Path
-
+import os
+os.environ["OMP_NUM_THREADS"] = "8"
+os.environ["MKL_NUM_THREADS"] = "8"
 import pandas as pd
 import torch
 

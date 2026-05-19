@@ -30,7 +30,29 @@ import random
 import pandas as pd
 import torch
 from PIL import Image
+import gc
+import torch
 
+
+def unload_model(model=None, processor=None):
+
+    try:
+        del model
+    except:
+        pass
+
+    try:
+        del processor
+    except:
+        pass
+
+    gc.collect()
+
+    torch.cuda.empty_cache()
+
+    torch.cuda.ipc_collect()
+
+    print("Model unloaded.")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -63,9 +85,9 @@ Respond with exactly this JSON structure:
 {{
   "object_description": "Describe the intact object (shown on the left): include its overall shape, structure, proportions, and any notable features.",
 
-  "fragment_location": "Specify where the piece broke off from on the object. Use precise positional language (e.g., 'outer rim', 'bottom-left corner of the base', 'upper section of the handle').",
+  "fragment_location": "Specify where the piece broke off from on the object. Use precise positional language (e.g. 'bottom-left corner of the base', 'upper section of the handle','the bottom base',...).". Indicate clearly if the fragment is Interior break or Boundary fracture
 
-  "fracture_surface": "Describe the highlighted (orange) fracture region: include its shape (e.g., 'thin curved strip', 'irregular polygon'), its relative size compared to the whole object (e.g., 'very small', 'about 10% of the surface'), and its orientation (e.g., 'curving along the rim', 'cutting diagonally across the body').",
+  "fracture_surface": "Describe the highlighted (orange) fracture region: include its shape (e.g., 'thin curved strip', 'irregular polygon',..), its relative size compared to the whole object (e.g., 'very small', 'about 10% of the surface'), and its orientation (e.g., 'curving along the rim', 'cutting diagonally across the body').",
 
   "missing_piece_size": "Estimate the size of the missing fragment relative to the whole object (e.g., 'tiny chip', 'small shard ~5% of the object', 'large fragment ~25% of the object').",
 
@@ -75,13 +97,14 @@ Respond with exactly this JSON structure:
 
   "confidence": "low | medium | high — indicate how confident you are in the above descriptions based on the available views and image quality.",
 
-  "caption": "Provide a single concise sentence describing the object and its damage. Only include features you are confident about (e.g., 'A teapot with a chipped spout tip', 'A ceramic mug with a fracture near the handle base')."
+  "caption": "Provide a single concise sentence describing the object and its damage. Only include features you are confident about (e.g., 'A teapot with a chipped spout tip', 'A ceramic mug with a fracture near the handle base','A TeaCup missing a piece of its plate'). Indicate clearly if the fragment is Interior break or Boundary fracture"
 }}
 For every field:
 - Use exactly ONE or TWO sentence
 - Maximum 25–30 words
 - No repetition or alternative explanations
 - No uncertainty phrases unless confidence is low
+- Try not using rim.
 """
 
 
@@ -155,7 +178,7 @@ def run_inference(model, processor, messages: list[dict],
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=True,          # sample for caption diversity across runs
-            temperature=0.7,
+            temperature=0.6,
             top_p=0.9,
         )
 
@@ -361,7 +384,7 @@ def main():
 
             log.info(f"  Caption {cap_idx + 1}/{args.n_captions} ...")
             t0 = time.time()
-
+            error_threshold = 11
             try:
                 raw    = run_inference(model, processor, messages, args.max_new_tokens)
                 parsed = parse_json_output(raw)
@@ -384,11 +407,15 @@ def main():
                     "raw_output":         raw,
                     "elapsed_s":          round(elapsed, 1),
                 })
-
-                status = "⚠ parse error" if parsed.get("_parse_error") else "✔"
+                if parsed.get("_parse_error"):
+                    status = "⚠ parse error" 
+                else:
+                    status = "✔"
+                    error_threshold = 11
                 log.info(f"    {status} ({elapsed:.1f}s) confidence={parsed.get('confidence')}")
-
+                
             except Exception as exc:
+                error_threshold = error_threshold - 1
                 log.error(f"    [error] caption {cap_idx}: {exc}")
                 traceback.print_exc()
                 output_rows.append({
@@ -401,6 +428,19 @@ def main():
                     "elapsed_s":   round(time.time() - t0, 1),
                 })
                 obj_ok = False
+                if error_threshold == 0:
+                    log.error(f"Too much crash. Program terminated at line {(row_idx + 1)*args.n_captions+cap_idx}")
+                    #exit program
+                    import sys
+                    sys.exit(1)
+                elif error_threshold % 3:
+                    #try to fix
+                    # unload old broken CUDA state
+                    unload_model(model, processor)
+            
+                    # reload clean model
+                    model, processor = load_model(args.model)
+                    log.warning(f"Recovered model. Remaining retries: {error_threshold}")
 
         # Flush after every object so progress is saved incrementally
         flush_to_csv()
